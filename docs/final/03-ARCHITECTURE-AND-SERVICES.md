@@ -11,12 +11,12 @@
 
 | Layer | Today | Files |
 |---|---|---|
-| UI | React 19, in-memory routing (no URL), 6 demo identities via `signIn` | `src/app`, `src/player`, `src/console`, `src/platform-admin`, `src/table` |
-| Service layer | Pure `fn(db, actorId, …)`, synchronous, no Promises, no DOM | `src/platform/*.ts` (22 files) |
-| Engine | Pure TS, injectable `Rng`, transport-agnostic commands | `src/engine/*.ts` (13 files) |
-| Scheduler / realtime | `Runtime` 250 ms `setInterval` tick; `TableDriver` paces one viewer; delayed `feeds` | `src/platform/runtime.ts` |
-| "DB" | One mutable `DB` object, direct mutation, best-effort `localStorage` | `src/platform/store.ts` |
-| Build | esbuild + Tailwind v4 → single inlined `dist/index.html` | `scripts/build.mjs` |
+| UI | React 19, in-memory routing (no URL), 6 demo identities via `signIn` | `mvp/src/app`, `mvp/src/player`, `mvp/src/console`, `mvp/src/platform-admin`, `mvp/src/table` |
+| Service layer | Pure `fn(db, actorId, …)`, synchronous, no Promises, no DOM | `mvp/src/platform/*.ts` (22 files) |
+| Engine | Pure TS, injectable `Rng`, transport-agnostic commands | `mvp/src/engine/*.ts` (13 files) |
+| Scheduler / realtime | `Runtime` 250 ms `setInterval` tick; `TableDriver` paces one viewer; delayed `feeds` | `mvp/src/platform/runtime.ts` |
+| "DB" | One mutable `DB` object, direct mutation, best-effort `localStorage` | `mvp/src/platform/store.ts` |
+| Build | esbuild + Tailwind v4 → single inlined `mvp/dist/index.html` | `mvp/scripts/build.mjs` |
 
 Every permission and tenant-isolation check is real, tested code — but it runs **inside the
 tab**, so it protects against the interface and mistakes, not against someone with devtools.
@@ -27,7 +27,7 @@ Making it enforce against a hostile client is the whole point of the server spli
 - The server side is near drop-in. `permissions.ts` throws `ForbiddenError` / `DomainError`
   that map cleanly to HTTP 403 / 400 / 409. `clock.now()` and `Rng` are injectable. The only
   browser touch (`globalThis.localStorage?.…` in `store.ts`) already no-ops on Node.
-- `src/engine` has **zero DOM coupling** and is transport-agnostic (`submitCommand` with
+- `mvp/src/engine` has **zero DOM coupling** and is transport-agnostic (`submitCommand` with
   seq/actionId idempotency, `redactEvent` per-viewer redaction).
 - The client-side cost is **breadth, not depth**: ~100 `useDb()` reads return the whole DB
   graph synchronously and ~139 `act()` writes assume in-process whole-graph access and a
@@ -48,13 +48,13 @@ inside the API service** (decision #4 in `00-INDEX.md`).
 
 | Service | Owns | Built from | Runs on (see 06) |
 |---|---|---|---|
-| **Client (SPA)** | All rendering (`src/app`, `src/player`, `src/console`, `src/platform-admin`, `src/ui`, `src/table`). **No** engine/service logic shipped. | Reworked `build.mjs` → static JS/CSS | S3 + CloudFront |
+| **Client (SPA)** | All rendering (`mvp/src/app`, `mvp/src/player`, `mvp/src/console`, `mvp/src/platform-admin`, `mvp/src/ui`, `mvp/src/table`). **No** engine/service logic shipped. | Reworked `build.mjs` → static JS/CSS | S3 + CloudFront |
 | **API service** | Every exported fn in `api.ts`, `crm.ts`, `messaging.ts`, `analytics.ts`, `competition.ts`, `retention.ts`, `calendar.ts`, `scheduling.ts`, `migration.ts`, `integrity.ts`, `permissions.ts`, `core.ts` — **plus the profit/billing module** (plans, entitlements, invoices, payment webhooks, Diamonds ledger). Stateless, horizontally scalable. | Fastify wrapper; `actorId` from session, never from the body | Fargate behind ALB |
-| **Table service** | `src/engine/*` + `Runtime`/`TableDriver` + delayed `feeds`. One authoritative actor per table; clients send `submitCommand`, receive redacted event streams over WSS. | Extracted `runtime.ts` as a WS server | Fargate, sticky by `table_id`, Redis-backed |
+| **Table service** | `mvp/src/engine/*` + `Runtime`/`TableDriver` + delayed `feeds`. One authoritative actor per table; clients send `submitCommand`, receive redacted event streams over WSS. | Extracted `runtime.ts` as a WS server | Fargate, sticky by `table_id`, Redis-backed |
 | **Scheduler worker** | The housekeeping split out of `Runtime.tick`: `publishDueAnnouncements`, `automation.tick`, `runSchedules`, `runInactivityAlerts`, `runPersonalReminders`, `applyRetention`. Idempotent (dedupe keys exist today). | Headless loop, **Redis leader lock** (single active) | Fargate (1 task) |
 | **Channel workers** | Drain `db.outbox` via `channels.registerAdapter`; real SES/SNS/Twilio/FCM adapters, async. | SQS consumers | Fargate, SQS-scaled |
 
-### 2.1 The client seam — `src/platform/client.ts` (to be written)
+### 2.1 The client seam — `mvp/src/platform/client.ts` (to be written)
 
 Screens `import * as api` today. Introduce `client.ts` that mirrors the service signatures but
 calls the API over HTTP; use a build-time module alias so `platform/api.ts` → `client.ts` in
@@ -79,7 +79,7 @@ In production:
 - `actorId` comes from the **verified session server-side**, never the request body.
 - The thrown-error types map to HTTP status codes in one adapter.
 
-A representative slice of the would-be HTTP surface (the full mapping is in `ARCHITECTURE.md`
+A representative slice of the would-be HTTP surface (the full mapping is in `mvp/docs/ARCHITECTURE.md`
 §3.7):
 
 | Route | Service function |
@@ -100,7 +100,7 @@ Realtime channels (over WSS / Redis pub-sub): `club:{id}`, `tournament:{id}`,
 ### 4.1 PostgreSQL (RDS, Multi-AZ)
 
 The `DB` interface (`types.ts`) **is** the schema: each top-level collection becomes a table.
-The mapping is already enumerated in `PRODUCTION_ARCHITECTURE.md` §4 and `ARCHITECTURE.md`
+The mapping is already enumerated in `mvp/docs/PRODUCTION_ARCHITECTURE.md` §4 and `mvp/docs/ARCHITECTURE.md`
 §3.6. Highlights:
 
 | Prototype collection | Production table(s) |

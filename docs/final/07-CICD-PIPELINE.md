@@ -25,6 +25,12 @@ The pipeline is built in Phase 6 (`08-ROADMAP.md`) but its **PR-gate half can an
 from day one** against the current prototype — it protects the service layer through the entire
 migration.
 
+> **Project root.** The prototype now lives in **`mvp/`** (the repo root holds only `mvp/` and
+> `docs/final/`). Every `npm` command and every `scripts/…`, `tests/…`, `dist/…`,
+> `package.json`, and `tsconfig.json` path in this document is relative to `mvp/`; the CI jobs
+> below therefore set `working-directory: mvp` (and point the dependency cache / artifact paths
+> at `mvp/…`).
+
 ## 2. Prerequisites to add first
 
 1. **Commit a lockfile** (`npm install` then commit `package-lock.json`) so CI uses
@@ -64,10 +70,12 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: mvp }       # package.json lives in mvp/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with: { node-version: 20, cache: npm, cache-dependency-path: mvp/package-lock.json }
       - run: npm ci
       - run: npm run typecheck
       - run: npm test                       # 220 unit (node:test + tsx)
@@ -77,7 +85,7 @@ jobs:
       - run: npm run e2e                     # 165 checks, headless Chromium
       - uses: actions/upload-artifact@v4
         if: failure()
-        with: { name: e2e-screenshots, path: scratch/e2e/ }
+        with: { name: e2e-screenshots, path: mvp/scratch/e2e/ }   # action path is repo-root-relative
 ```
 
 Notes:

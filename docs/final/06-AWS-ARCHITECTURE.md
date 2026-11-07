@@ -123,5 +123,5 @@ replicas, and eventually multi-region. None require re-architecting the service 
 ## 11. Cost note
 
 Running costs are the client's ongoing expense, roughly **$500–$1,000/mo** for the v1 footprint
-(Fargate, RDS Multi-AZ, ElastiCache, ALB, NAT, CloudFront, S3) per `docs/BILLING_ESTIMATE.md`.
+(Fargate, RDS Multi-AZ, ElastiCache, ALB, NAT, CloudFront, S3) per `mvp/docs/BILLING_ESTIMATE.md`.
 This is separate from build fees and from the payment-processing fees in `04-PROFIT-MODULE.md`.

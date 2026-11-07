@@ -2,7 +2,7 @@
 
 > **Audience: all.** How Poker Club OS makes money, and for each stream: where it lives in the
 > service split (`03-ARCHITECTURE-AND-SERVICES.md`), what data it needs, and how to build it.
-> This expands `docs/PROFIT_MODULE.md` with the production decisions from this plan.
+> This expands `mvp/docs/PROFIT_MODULE.md` with the production decisions from this plan.
 >
 > **Billing lives inside the API service** (decision #4, `00-INDEX.md`). There is no separate
 > billing service: provider-hosted checkout keeps card data off our servers (PCI SAQ-A), so no
@@ -14,7 +14,7 @@
 ## 0. The honest starting point
 
 The prototype has **no money anywhere**. Every balance is demo points; all prices render in a
-placeholder currency (`money()` prints `¤` in `src/shared/plans.tsx`); the billing screens are
+placeholder currency (`money()` prints `¤` in `mvp/src/shared/plans.tsx`); the billing screens are
 labelled DEMO. Turning any of this into revenue requires the server split, a payment provider,
 and the legal + app-store gates. This document describes the target and the smallest honest
 path to it.
@@ -53,16 +53,16 @@ path to it.
 
 ### What exists today
 
-- **Types** (`src/platform/types.ts`): `PlanId = 'starter' | 'professional' | 'enterprise'`;
+- **Types** (`mvp/src/platform/types.ts`): `PlanId = 'starter' | 'professional' | 'enterprise'`;
   `Plan { model, baseFee, perActiveFee, includedActive, limits, customBranding, reporting,
   support }`; `PlanLimits { members, monthlyActive, concurrentTables, tournamentsPerMonth,
   adminSeats }`; `Invoice { base, usage, activePlayers, total, status: 'paid'|'due'|'draft' }`.
   Each `Club` has `planId` and `limitOverrides`.
-- **Logic** (`src/platform/api.ts`): `effectiveLimits` (plan + overrides), `clubUsage`,
+- **Logic** (`mvp/src/platform/api.ts`): `effectiveLimits` (plan + overrides), `clubUsage`,
   `invoicePreview`; limits enforced via `fail('club_full', …)` and the single feature gate
   `fail('plan_feature', …)` at `api.ts:614`.
-- **UI**: `src/console/Subscription.tsx`, `src/platform-admin/Billing.tsx`,
-  `src/shared/plans.tsx`.
+- **UI**: `mvp/src/console/Subscription.tsx`, `mvp/src/platform-admin/Billing.tsx`,
+  `mvp/src/shared/plans.tsx`.
 
 ### How to implement
 
@@ -117,7 +117,7 @@ Diamonds are a **platform** currency (real money in → Diamonds), **distinct fr
 
 - **Data**: `wallets { ownerId|userId, diamonds }` and an append-only `diamond_ledger`
   (purchases, spends) following the audit/event-log pattern.
-- **Service**: a new `src/platform/wallet.ts` (same guarded-function shape). Every spend goes
+- **Service**: a new `mvp/src/platform/wallet.ts` (same guarded-function shape). Every spend goes
   through it (`fail('insufficient_diamonds', …)`), permission-checked and logged. Never enforce
   a spend in the UI.
 - **Player perk hook (extra decision time)**: the turn timer lives in the **table service**
@@ -135,7 +135,7 @@ Diamonds are a **platform** currency (real money in → Diamonds), **distinct fr
 Club owners pay to **boost a tournament** to players across discovery, the player home feed,
 and the "Top Clubs" surfaces — a direct acquisition tool for owners.
 
-- **Service**: a new `src/platform/promotions.ts` beside `automation.ts` (same guarded shape);
+- **Service**: a new `mvp/src/platform/promotions.ts` beside `automation.ts` (same guarded shape);
   add a `promotions.manage` permission (owner & manager).
 - **Data**: `promotions { id, clubId, tournamentId, budget, startsAt, endsAt, status,
   impressions, clicks }`.
@@ -163,7 +163,7 @@ The entitlement pattern is already proven by the **single** gate in the code —
 all of them:
 
 ```ts
-// src/platform/api.ts:614
+// mvp/src/platform/api.ts:614
 if (usesImage && !db.plans[club.planId].customBranding) {
   fail('plan_feature', 'Uploading your own logo and cover is part of the Professional plan and above.');
 }
@@ -196,7 +196,7 @@ included**.
   their name instead of "Poker Club OS") needs an `organizations` row above `club_id` carrying
   brand assets + domain, resolved at request time. Maps onto the existing `club_id`-as-tenant
   model (`03` §4).
-- **Missing today**: the platform-level branding editor (`src/platform-admin/`) — build it to
+- **Missing today**: the platform-level branding editor (`mvp/src/platform-admin/`) — build it to
   set an org's theme catalogue, accent, and logo; the `THEMES` plumbing already consumes them.
 
 Depends on the server and billing being live (`08-ROADMAP.md`).
@@ -206,10 +206,10 @@ Depends on the server and billing being live (`08-ROADMAP.md`).
 ## 8. Game development & engine rental (B2B)
 
 License/rent the engine to other companies. The engine is already a clean, reusable, UI-free
-asset (`src/engine`, 13 files, zero DOM coupling, event-sourced, multi-variant). This is a
+asset (`mvp/src/engine`, 13 files, zero DOM coupling, event-sourced, multi-variant). This is a
 **commercial/packaging** effort, not a prototype feature:
 
-1. Decide the product: **(a)** an embeddable engine SDK (an npm package of `src/engine` with a
+1. Decide the product: **(a)** an embeddable engine SDK (an npm package of `mvp/src/engine` with a
    stable public API + license-key check), or **(b)** a hosted white-label (which is §7 at org
    scale).
 2. For (a): the engine's command/sequence/`actionId` contract is already the integration
@@ -228,7 +228,7 @@ A ranked showcase of the strongest clubs — by rating, players, or tournaments 
 **country filter** and drill-down into each club's tournaments. Primarily an owner acquisition
 surface; also the natural home for §5 sponsored placements.
 
-What exists: the scoring machinery in `src/platform/competition.ts` — `globalLeaderboard` and
+What exists: the scoring machinery in `mvp/src/platform/competition.ts` — `globalLeaderboard` and
 `clubLeaderboard` share one weighted-score definition, with fairness exclusions (bots,
 demo-seeded, cancelled/invalidated).
 
@@ -237,11 +237,11 @@ What's missing:
 - **Clubs have no `country` field** (`types.ts` has none) — the country filter needs it.
 
 How to implement:
-1. Add `country` to `Club` (`types.ts`, seed, `src/console/Branding.tsx` / the club wizard).
+1. Add `country` to `Club` (`types.ts`, seed, `mvp/src/console/Branding.tsx` / the club wizard).
 2. New selector `clubRankings(db, { by: 'rating'|'players'|'tournaments', country? })` in
    `competition.ts`, reusing the scoring + fairness rules. Pick one definition of club "rating"
    (aggregate member scores or tournament volume) and test it against hand-calculated values.
-3. New player screen `src/player/TopClubs.tsx`: ranked list, three modes, country filter,
+3. New player screen `mvp/src/player/TopClubs.tsx`: ranked list, three modes, country filter,
    drill-down to each club's tournaments; sponsored entries clearly marked. Make
    joining/opening a club one click from here (strategic priority).
 

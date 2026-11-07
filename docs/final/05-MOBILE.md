@@ -23,13 +23,13 @@ across targets.
 ## 2. Why this is cheap here (grounded in the current code)
 
 - **Self-contained bundle** — no bundler framework or asset pipeline to untangle
-  (`scripts/build.mjs`).
-- **In-memory routing with no URL/history coupling** (`src/app/session.ts`, `go()` in
+  (`mvp/scripts/build.mjs`).
+- **In-memory routing with no URL/history coupling** (`mvp/src/app/session.ts`, `go()` in
   `hooks.ts`) — nothing to reconcile with native navigation.
 - **Mobile ergonomics already done** — `viewport-fit=cover`, `color-scheme`, safe-area insets,
   and 44px touch targets from the v3 redesign; responsive QC already covers 360/390px widths.
 - **The seams exist** — a `push` channel and the `registerAdapter` seam already exist
-  (`src/platform/channels.ts`); mobile auth is already planned as refresh tokens (`03` §5).
+  (`mvp/src/platform/channels.ts`); mobile auth is already planned as refresh tokens (`03` §5).
 
 ## 3. The real native work items
 

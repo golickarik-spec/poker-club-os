@@ -5,12 +5,12 @@
 > tested), **DEMO** (works on simulated data by design, labelled in UI), **PARTIAL** (part
 > exists; gap named), **MISSING** (not built).
 >
-> This is the superset of `V04_FEATURE_AUDIT.md`, `V04_REPORT.md`, `COMPLETION_REPORT.md`, and
+> This is the superset of `mvp/docs/V04_FEATURE_AUDIT.md`, `mvp/docs/V04_REPORT.md`, `mvp/docs/COMPLETION_REPORT.md`, and
 > the design docs. Test counts are the 0.4.0 run: **220 unit / 165 e2e**.
 
 ---
 
-## 1. Poker engine (`src/engine`)
+## 1. Poker engine (`mvp/src/engine`)
 
 Pure TypeScript, no UI or browser APIs. Event-sourced: every hand is an ordered log of events
 (`start`, `post`, `hole`, `turn`, `action`, `collect`, `show`, `showdown`, `award`, `end`),
@@ -32,7 +32,7 @@ already shaped for a server/WebSocket split.
 | Omaha bot strategy | PARTIAL / DEMO | Simplified for Omaha variants |
 | Stud, draw, mixed games, run-it-twice | MISSING | Typed in the registry, shown as "planned", blocked in the UI |
 
-## 2. Tournament engine (`src/engine/tournament.ts`, `structure.ts`)
+## 2. Tournament engine (`mvp/src/engine/tournament.ts`, `structure.ts`)
 
 Time is injected (`advanceClock`), so a whole tournament runs in milliseconds in tests and the
 demo runs at ×1–×240.
@@ -52,7 +52,7 @@ demo runs at ×1–×240.
 Covered by `tournament.test.ts` (15): complete tournaments up to 64 players, late entry,
 balancing, elimination ranking.
 
-## 3. CRM & community (club console, `src/console/crm`)
+## 3. CRM & community (club console, `mvp/src/console/crm`)
 
 The richest part of the product. One row per person who has any relationship with a club,
 built on demand so a figure and its underlying list can never disagree.
@@ -69,7 +69,7 @@ built on demand so a figure and its underlying list can never disagree.
 | CRM settings, member numbering, sources | IMPLEMENTED | — |
 | **The 12 console CRM screens** (overview, players, player profile, requests, segments, inbox, notifications, analytics, automation, referrals, migration, settings) | IMPLEMENTED | `crm.test.ts` (50), journey D (54 checks) |
 
-## 4. Analytics (`src/platform/analytics.ts`)
+## 4. Analytics (`mvp/src/platform/analytics.ts`)
 
 Stores nothing; every figure recomputes from two sources (tournament participation + the CRM
 event log).
@@ -85,7 +85,7 @@ event log).
 Analytics tests build known data (e.g. 1,000 followers → 600 request → 480 approved → 300 play
 → 180 return) and check counts and percentages against hand-calculated values.
 
-## 5. Competition layer (`src/platform/competition.ts`)
+## 5. Competition layer (`mvp/src/platform/competition.ts`)
 
 | Capability | Status |
 |---|---|
@@ -114,7 +114,7 @@ Covered by `competition.test.ts` (11).
 
 Covered by `referral.test.ts` (3), `qr.test.ts` (2), `calendar.test.ts` (5).
 
-## 7. Retention engine (`src/platform/retention.ts`)
+## 7. Retention engine (`mvp/src/platform/retention.ts`)
 
 | Capability | Status |
 |---|---|
@@ -126,7 +126,7 @@ Covered by `referral.test.ts` (3), `qr.test.ts` (2), `calendar.test.ts` (5).
 
 Covered by `retention.test.ts` (6).
 
-## 8. Notifications & channels (`src/platform/channels.ts`)
+## 8. Notifications & channels (`mvp/src/platform/channels.ts`)
 
 | Capability | Status |
 |---|---|
@@ -167,7 +167,7 @@ Covered by `migration.test.ts` (4), `scheduling.test.ts` (4).
 
 Covered by `spectator.test.ts` (3), `integrity.test.ts` (2).
 
-## 11. Design system (`src/ui`, `src/styles`, `src/table`)
+## 11. Design system (`mvp/src/ui`, `mvp/src/styles`, `mvp/src/table`)
 
 | Capability | Status |
 |---|---|
@@ -181,7 +181,7 @@ Covered by `spectator.test.ts` (3), `integrity.test.ts` (2).
 | Accessibility (keyboard reach, visible focus, labelled icon buttons, reduced motion, high-contrast, four-colour deck) | IMPLEMENTED |
 | Light mode | MISSING — tokens ready, not implemented |
 
-## 12. Platform administration (`src/platform-admin`)
+## 12. Platform administration (`mvp/src/platform-admin`)
 
 | Capability | Status |
 |---|---|
@@ -202,7 +202,7 @@ Covered by `spectator.test.ts` (3), `integrity.test.ts` (2).
 - **No provider secrets in the bundle** — channel adapters are a registry with demo
   implementations; the server-side registration point is documented.
 - **Tenant isolation** — three architecture tests fail the build if any file outside
-  `src/platform` reads the CRM store, conversations, unguarded calculations, or a tournament's
+  `mvp/src/platform` reads the CRM store, conversations, unguarded calculations, or a tournament's
   access code.
 
 ## 14. What production adds to these features

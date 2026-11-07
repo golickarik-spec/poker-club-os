@@ -20,7 +20,7 @@
 | 7 | **Web + native delivery** | Installable PWA website **and** App Store / Play Store apps from one codebase | 6–10 wk eng + store review |
 | **P** | **Profit module** (see §3) | Owner subscriptions, entitlements, Diamonds ledger; real billing after legal | woven across 2 / 4 / 6 |
 
-Headline build range (from `BILLING_ESTIMATE.md`): **19–28 weeks** for Phases 1–6
+Headline build range (from `mvp/docs/BILLING_ESTIMATE.md`): **19–28 weeks** for Phases 1–6
 (~760–1,120 hours), plus Phase 7 and the profit module.
 
 ## 2. Phase detail

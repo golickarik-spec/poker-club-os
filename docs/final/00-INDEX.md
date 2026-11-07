@@ -3,7 +3,7 @@
 > This folder is the **single consolidated plan** for Poker Club OS: what the product is,
 > everything it does, how it becomes a production system split into services, how it ships
 > to mobile, how it runs on AWS, and how it deploys. It synthesizes the ~11 documents under
-> `docs/` plus the current codebase into one forward-looking blueprint.
+> `mvp/docs/` plus the current codebase into one forward-looking blueprint.
 >
 > It is written for **two readers at once**, clearly sectioned:
 > - **Business / product** readers — start with `01-PRODUCT-OVERVIEW.md`, then skim
@@ -27,7 +27,7 @@
 | 07 | [07-CICD-PIPELINE.md](07-CICD-PIPELINE.md) | Engineering | The build/test/deploy pipeline (greenfield — none exists today) |
 | 08 | [08-ROADMAP.md](08-ROADMAP.md) | All | The phased delivery sequence, dependencies, effort, and per-phase verification |
 
-The existing `docs/` files remain the **source of record**; this set references them and
+The existing `mvp/docs/` files remain the **source of record**; this set references them and
 should not contradict them. Where two older docs disagreed, this set resolves it (see
 "Facts this plan fixes" below).
 
@@ -66,10 +66,10 @@ These were decided for this consolidation and are applied uniformly across all d
 
 | Version | Theme | Delivery docs | Unit tests | E2E checks |
 |---|---|---|---|---|
-| 0.1.0 | Baseline prototype (engine, clubs, tournaments) | `CRM_AUDIT.md` (baseline audit) | — | — |
-| 0.2.0 | CRM, community, analytics | `COMPLETION_REPORT.md` | 146 | 135 |
-| 0.3.0 | "Modern Poker Arena" redesign, table branding | `DESIGN_V3.md`, `REDESIGN_REPORT_V3.md` | 153 | 137 |
-| 0.4.0 | Feature expansion (variants, competition, growth, retention, integrity) | `V04_REPORT.md`, `V04_FEATURE_AUDIT.md` | **220** | **165** |
+| 0.1.0 | Baseline prototype (engine, clubs, tournaments) | `mvp/docs/CRM_AUDIT.md` (baseline audit) | — | — |
+| 0.2.0 | CRM, community, analytics | `mvp/docs/COMPLETION_REPORT.md` | 146 | 135 |
+| 0.3.0 | "Modern Poker Arena" redesign, table branding | `mvp/docs/DESIGN_V3.md`, `mvp/docs/REDESIGN_REPORT_V3.md` | 153 | 137 |
+| 0.4.0 | Feature expansion (variants, competition, growth, retention, integrity) | `mvp/docs/V04_REPORT.md`, `mvp/docs/V04_FEATURE_AUDIT.md` | **220** | **165** |
 
 Everything in this plan builds **forward** from 0.4.0 toward a deployed production system; it
 does not propose rewriting what exists.
@@ -79,11 +79,11 @@ does not propose rewriting what exists.
 ## Shared glossary (used throughout)
 
 **The three experiences.** One browser app with three role-separated surfaces: the **Player
-app** (`src/player`), the **Club console** (`src/console`), and the **Platform
-administration** (`src/platform-admin`).
+app** (`mvp/src/player`), the **Club console** (`mvp/src/console`), and the **Platform
+administration** (`mvp/src/platform-admin`).
 
-**The two engines.** `src/engine` (poker + tournament logic, pure TypeScript, no UI/browser
-APIs) and the `src/platform` service layer (the "mock backend").
+**The two engines.** `mvp/src/engine` (poker + tournament logic, pure TypeScript, no UI/browser
+APIs) and the `mvp/src/platform` service layer (the "mock backend").
 
 **The four relationship records.** A person and a club relate in four *independent* ways; none
 implies another:
@@ -113,9 +113,9 @@ gold `#e3c27a`). The app ships two interchangeable looks (v2 / v3) selected at b
 
 ## Facts this plan fixes (discrepancies in the older docs)
 
-- **Palette.** `REDESIGN_REPORT_V3.md §3` still cites a superseded teal palette
+- **Palette.** `mvp/docs/REDESIGN_REPORT_V3.md §3` still cites a superseded teal palette
   (`#18a999` / `#0b1015`). The authoritative direction is **graphite & ember** (`#0c0f13` /
-  `#ff8a3d` / `#e3c27a`), per `DESIGN_V3.md` and that report's own §0 Revision 2.
+  `#ff8a3d` / `#e3c27a`), per `mvp/docs/DESIGN_V3.md` and that report's own §0 Revision 2.
 - **Clubs-per-owner.** The 0.4 prototype hard-codes **3 clubs per owner** at self-service club
   creation. The ClubHouse subscription model replaces this with a **plan-driven `maxClubs`**
   (1 / 5 / 10). See `04-PROFIT-MODULE.md`.
