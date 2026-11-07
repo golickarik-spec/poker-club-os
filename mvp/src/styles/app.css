@@ -1,0 +1,434 @@
+/*
+ * Poker Club OS — design tokens
+ *
+ * Layout: an app, not a page. One fixed-height shell (demo bar → environment
+ * shell with navigation → a single scrolling main column). The live table is
+ * the only full-bleed surface.
+ *
+ * One deliberate look (dark). Colour follows the brief's palette; the accent is
+ * a variable so each club can wear its own. Gold is reserved for achievement.
+ */
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0f14;
+  --color-surface: #131a22;
+  --color-raised: #1b2530;
+  --color-raised-2: #233040;
+  --color-line: #1f2a37;
+  --color-line-strong: #2e3d4f;
+  --color-ink: #f4f6f8;
+  --color-ink-2: #93a1b2;
+  --color-ink-3: #66768a;
+  --color-brand: #14b8a6;
+  --color-gold: #d6b36a;
+  --color-danger: #ef5b5b;
+  --color-success: #22c55e;
+  --color-warning: #f0883e;
+  --color-info: #6aa5ff;
+
+  --font-sans: "Inter", "Heebo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-clock: "Archivo", "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", "Lora", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace;
+
+  --radius-chip: 6px;
+  --radius-badge: 9999px;
+  --radius-control: 8px;
+  --radius-inner: 10px;
+  --radius-panel: 14px;
+  --radius-hero: 16px;
+
+  --color-bg-2: #0d1218;
+  --font-display: "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif;
+  --shadow-pop: 0 18px 40px -16px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --shadow-plate: 0 6px 14px rgb(0 0 0 / 0.5);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 0.28s var(--ease-out-quint) both;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
+  --animate-sheet: sheet 0.26s var(--ease-out-quint) both;
+  --animate-pop: pop 0.22s var(--ease-out-quint) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+/* The accent is a live variable: any element can set --accent / --accent-ink to re-skin its subtree in a club's colours. */
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --accent: #14b8a6;
+    --accent-ink: #03110f;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    font-feature-settings: "ss01", "cv11", "calt";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+    letter-spacing: -0.011em;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button, [role="button"], a, select, summary, label[for] {
+    cursor: pointer;
+  }
+  button:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  input, textarea, select {
+    font: inherit;
+  }
+  /* Thin, quiet scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  /* Number inputs: no spinners (we provide our own steppers where needed) */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  [dir="rtl"] .flip-rtl {
+    transform: scaleX(-1);
+  }
+}
+
+/* Reduced motion: honour the OS setting and the in-app preference alike. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.high-contrast {
+  --color-ink-2: #c3cedb;
+  --color-ink-3: #9fb0c3;
+  --color-line: #33455a;
+  --color-line-strong: #4b627c;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+@utility panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--color-line);
+}
+@utility well {
+  background: color-mix(in oklab, var(--color-raised) 60%, transparent);
+  border-radius: var(--radius-inner);
+}
+@utility stage {
+  background: var(--color-surface);
+  border-radius: var(--radius-hero);
+  border: 1px solid var(--color-line);
+}
+@utility rows {
+  & > * + * {
+    border-top: 1px solid var(--color-line);
+  }
+}
+.pc3-floor { background: #080b0f; }
+.pc3-rail { background: linear-gradient(180deg, var(--rail-a), var(--rail-b)); box-shadow: 0 28px 60px -18px rgb(0 0 0 / 0.75), 0 2px 0 rgb(255 255 255 / 0.06) inset, 0 -3px 8px rgb(0 0 0 / 0.5) inset; }
+.pc3-felt { background: radial-gradient(70% 62% at 50% 42%, var(--felt-a) 0%, var(--felt-b) 58%, var(--felt-c) 100%); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55), 0 10px 30px rgb(0 0 0 / 0.55) inset, 0 0 90px rgb(0 0 0 / 0.35) inset; }
+.pc3-felt-line { border: 1px solid var(--felt-line); }
+.pc3-plate { background: rgb(16 22 30 / 0.95); box-shadow: var(--shadow-plate); backdrop-filter: blur(4px); }
+.pc3-plate-hero { background: rgb(16 22 30 / 0.97); }
+.anim-turn { box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent), var(--shadow-plate); }
+
+@utility clock-digits {
+  font-family: var(--font-clock);
+  font-stretch: 75%;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
+}
+
+@utility skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-raised) 25%, var(--color-raised-2) 37%, var(--color-raised) 63%);
+  background-size: 400% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* A range input that matches the product. */
+.pc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+}
+.pc-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--color-raised-2) var(--fill, 0%));
+}
+[dir="rtl"] .pc-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to left, var(--accent) var(--fill, 0%), var(--color-raised-2) var(--fill, 0%));
+}
+.pc-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-raised-2);
+}
+.pc-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.pc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+}
+.pc-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 3px solid var(--accent);
+}
+
+/* ==========================================================================
+   The poker table
+   ========================================================================== */
+
+.felt-midnight { --felt-a: #1d3a5c; --felt-b: #10233c; --felt-c: #0a1626; --rail-a: #232b36; --rail-b: #0e1319; --felt-line: rgb(160 200 255 / 0.14); }
+.felt-emerald  { --felt-a: #17694f; --felt-b: #0d4636; --felt-c: #072a21; --rail-a: #2a2620; --rail-b: #100e0b; --felt-line: rgb(190 255 225 / 0.14); }
+.felt-royal    { --felt-a: #3a3a8c; --felt-b: #24245f; --felt-c: #14143a; --rail-a: #2a2733; --rail-b: #0f0e15; --felt-line: rgb(205 200 255 / 0.15); }
+.felt-burgundy { --felt-a: #6f1f33; --felt-b: #4a1423; --felt-c: #2a0b14; --rail-a: #30261c; --rail-b: #130e09; --felt-line: rgb(255 215 190 / 0.14); }
+.felt-graphite { --felt-a: #3b434d; --felt-b: #272d35; --felt-c: #171b20; --rail-a: #20242a; --rail-b: #0c0e11; --felt-line: rgb(230 235 245 / 0.12); }
+
+.pc-rail {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.10), transparent 55%),
+    linear-gradient(180deg, var(--rail-a), var(--rail-b));
+  box-shadow:
+    0 28px 60px -18px rgb(0 0 0 / 0.75),
+    0 2px 0 rgb(255 255 255 / 0.06) inset,
+    0 -3px 8px rgb(0 0 0 / 0.5) inset;
+}
+.pc-felt {
+  background:
+    radial-gradient(70% 62% at 50% 42%, var(--felt-a) 0%, var(--felt-b) 58%, var(--felt-c) 100%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.55),
+    0 10px 30px rgb(0 0 0 / 0.55) inset,
+    0 0 90px rgb(0 0 0 / 0.35) inset;
+}
+.pc-felt-line {
+  border: 1px solid var(--felt-line);
+}
+
+/* Playing cards */
+.pc-card {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  border-radius: 9%/6.5%;
+  background: linear-gradient(170deg, #ffffff, #e9edf2);
+  color: #12161c;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 3px 8px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(0 0 0 / 0.35);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.pc-card-rank {
+  position: absolute;
+  inset-block-start: 7cqw;
+  left: 9cqw;
+  font-size: 44cqw;
+  letter-spacing: -0.04em;
+}
+.pc-card-suit-small {
+  position: absolute;
+  top: 52cqw;
+  left: 9cqw;
+  width: 27cqw;
+  height: 27cqw;
+}
+.pc-card-suit-big {
+  position: absolute;
+  right: 7cqw;
+  bottom: 8cqw;
+  width: 54cqw;
+  height: 54cqw;
+  opacity: 0.92;
+}
+.pc-card-back {
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--accent) 55%, #0b0f14) 0 18%, transparent 19%),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 7px),
+    linear-gradient(160deg, color-mix(in oklab, var(--accent) 46%, #101822), color-mix(in oklab, var(--accent) 22%, #0b0f14));
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 0 3cqw rgb(255 255 255 / 0.08) inset, 0 3px 8px rgb(0 0 0 / 0.45);
+}
+.suit-s { color: #12161c; }
+.suit-h { color: #d3273e; }
+.suit-d { color: #d3273e; }
+.suit-c { color: #12161c; }
+.deck-four .suit-d { color: #1f6fe0; }
+.deck-four .suit-c { color: #17853f; }
+
+@keyframes card-deal {
+  from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, -40px)) rotate(-12deg) scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes card-flip {
+  0% { transform: rotateY(90deg) translateY(-6px); opacity: 0.4; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes win-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 18px 2px rgb(214 179 106 / 0.35); }
+  50% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 30px 6px rgb(214 179 106 / 0.6); }
+}
+@keyframes turn-ring {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: var(--ring-length); }
+}
+.anim-card-deal { animation: card-deal 0.34s var(--ease-out-quint) both; }
+.anim-card-flip { animation: card-flip 0.32s var(--ease-out-quint) both; }
+.anim-chip-in { animation: chip-in 0.3s var(--ease-out-quint) both; }
+.anim-win { animation: win-glow 1.4s ease-in-out 2; }
+
+/* Chips: a disc with edge inlays, drawn with gradients */
+.pc-chip {
+  --chip: #d9dde3;
+  width: var(--chip-size, 18px);
+  height: var(--chip-size, 18px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--chip) 0 44%, transparent 45%),
+    repeating-conic-gradient(from 0deg, rgb(255 255 255 / 0.92) 0 22.5deg, var(--chip) 22.5deg 45deg);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55), 0 1px 0 1px rgb(0 0 0 / 0.35), 0 2px 3px rgb(0 0 0 / 0.5);
+  flex: none;
+}
+
+/* Ring timer on the acting seat */
+.turn-ring circle {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Cover / banner art built from gradients — original, no bitmaps */
+.banner-aurora  { background: radial-gradient(120% 140% at 0% 0%, #1b6f78 0%, transparent 55%), radial-gradient(90% 120% at 100% 20%, #3b3f9a 0%, transparent 60%), #101822; }
+.banner-ember   { background: radial-gradient(110% 130% at 100% 0%, #8a3b22 0%, transparent 55%), radial-gradient(90% 120% at 0% 100%, #5a2440 0%, transparent 60%), #17131a; }
+.banner-tide    { background: radial-gradient(120% 140% at 100% 100%, #116a6a 0%, transparent 55%), radial-gradient(80% 120% at 0% 0%, #1d4f8a 0%, transparent 60%), #0e1a22; }
+.banner-onyx    { background: radial-gradient(100% 140% at 50% 0%, #37424f 0%, transparent 60%), #10151b; }
+.banner-gilded  { background: radial-gradient(110% 140% at 0% 0%, #7a6230 0%, transparent 55%), radial-gradient(90% 120% at 100% 100%, #4a3320 0%, transparent 60%), #17140f; }
+
+@keyframes fly {
+  from { transform: translate(-50%, -50%); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.9); opacity: 0.2; }
+}
+.anim-fly { animation: fly 0.55s var(--ease-out-quint) both; }
+
+@keyframes turn-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@keyframes turn-own {
+  0%, 55% { background: var(--accent); }
+  80% { background: var(--color-warning); }
+  100% { background: var(--color-danger); }
+}
+.turn-bar { animation: turn-drain linear both; transform-origin: left center; }
+.turn-bar-own { animation-name: turn-drain, turn-own; animation-timing-function: linear; animation-fill-mode: both; }
+
+/*
+ * Unlayered on purpose. A host page's own reset (for example the skeleton a published
+ * artifact is wrapped in) is unlayered, and unlayered rules beat everything in a layer.
+ * These few declarations restate the base so the app looks the same wherever it is embedded.
+ */
+:root {
+  color-scheme: dark;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}

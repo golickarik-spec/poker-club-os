@@ -1,0 +1,502 @@
+/*
+ * Poker Club OS — design tokens, v3 ("Modern Poker Arena")
+ *
+ * The v0.2 tokens live untouched in app.css; the build picks one of the two files.
+ *
+ * Principles
+ *  - Depth comes from luminance, not borders. Surfaces step up in lightness
+ *    (bg → surface → raised → raised-2); hairlines are low-alpha white, used sparingly.
+ *  - Two type voices. Inter for the interface; Archivo for what has to be read from
+ *    across the room: tournament titles, clocks, stacks, page titles. The condensed
+ *    cut of Archivo is the clock; the wide cut is the headline.
+ *  - Teal is the only interactive colour. Gold is reserved for prestige: a winner, a
+ *    champion, first place. Status colours (success/warning/danger) never decorate.
+ *  - Corners are tighter than v2 (6 / 8 / 10 / 14) so the product reads as software,
+ *    not as a stack of pills.
+ */
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0c0f13;
+  --color-bg-2: #0e1217;
+  --color-surface: #13181e;
+  --color-raised: #1b2229;
+  --color-raised-2: #242d36;
+  --color-line: #2a333c;
+  --color-line-strong: #3b4752;
+  --color-ink: #f3f5f7;
+  --color-ink-2: #9ea9b3;
+  --color-ink-3: #6f7a85;
+  --color-brand: #ff8a3d;
+  --color-gold: #e3c27a;
+  --color-danger: #e85d68;
+  --color-success: #2cb67d;
+  --color-warning: #e9a23b;
+  --color-info: #5b9cf0;
+
+  --font-sans: "Inter", "Heebo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Archivo", "Inter Display", "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif;
+  --font-clock: "Archivo", "Inter Display", "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", "Lora", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, monospace;
+
+  --radius-chip: 4px;
+  --radius-badge: 5px;
+  --radius-control: 6px;
+  --radius-inner: 8px;
+  --radius-panel: 10px;
+  --radius-hero: 14px;
+
+  --shadow-pop: 0 18px 40px -16px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --shadow-plate: 0 8px 18px -6px rgb(0 0 0 / 0.65), 0 0 0 1px rgb(0 0 0 / 0.55);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 0.28s var(--ease-out-quint) both;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
+  --animate-sheet: sheet 0.26s var(--ease-out-quint) both;
+  --animate-pop: pop 0.22s var(--ease-out-quint) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+/* The accent is a live variable: any element can set --accent / --accent-ink to re-skin its subtree in a club's colours. */
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --accent: #ff8a3d;
+    --accent-ink: #1d0c02;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    font-feature-settings: "ss01", "cv11", "calt";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+    letter-spacing: -0.011em;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button, [role="button"], a, select, summary, label[for] {
+    cursor: pointer;
+  }
+  button:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  input, textarea, select {
+    font: inherit;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  [dir="rtl"] .flip-rtl {
+    transform: scaleX(-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.high-contrast {
+  --color-ink-2: #c3cedb;
+  --color-ink-3: #9fb0c3;
+  --color-line: #3a4a5a;
+  --color-line-strong: #52667c;
+}
+
+/* The product's own chrome (bars, sidebars, tabs) keeps the product accent even inside a club's scope. */
+@utility product-scope {
+  --accent: var(--color-brand);
+  --accent-ink: #1d0c02;
+}
+
+/* ----- Type voices ------------------------------------------------------------------- */
+
+/* Headlines, tournament titles, stat values: the wide cut of Archivo, set tight. */
+@utility display {
+  font-family: var(--font-display);
+  font-stretch: 100%;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+/* Clocks and big figures: the condensed cut. */
+@utility clock-digits {
+  font-family: var(--font-clock);
+  font-stretch: 78%;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
+}
+/* Hebrew has no Archivo: the display voice falls back to Heebo, heavier and a little tighter. */
+[lang="he"] .display, [dir="rtl"] .display {
+  font-family: "Heebo", var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ----- Surfaces ---------------------------------------------------------------------- */
+
+/* A panel: a step up in luminance with a one-pixel highlight along its top edge. */
+@utility panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-line) 70%, transparent), 0 1px 0 0 rgb(255 255 255 / 0.035) inset;
+}
+/* A quieter inset area inside a panel. */
+@utility well {
+  background: color-mix(in oklab, var(--color-bg) 55%, var(--color-surface));
+  border-radius: var(--radius-inner);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25) inset;
+}
+/* A hero surface: deeper, with a soft spotlight from above. */
+@utility stage {
+  background:
+    radial-gradient(120% 90% at 50% -20%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--color-surface), var(--color-bg-2));
+  border-radius: var(--radius-hero);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-line) 70%, transparent), 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 24px 60px -30px rgb(0 0 0 / 0.8);
+}
+/* Hairline dividers between list rows. */
+@utility rows {
+  & > * + * {
+    border-top: 1px solid color-mix(in oklab, var(--color-line) 60%, transparent);
+  }
+}
+
+@utility skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-raised) 25%, var(--color-raised-2) 37%, var(--color-raised) 63%);
+  background-size: 400% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* A range input that matches the product. */
+.pc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+}
+.pc-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--color-raised-2) var(--fill, 0%));
+}
+[dir="rtl"] .pc-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to left, var(--accent) var(--fill, 0%), var(--color-raised-2) var(--fill, 0%));
+}
+.pc-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-raised-2);
+}
+.pc-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.pc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+}
+.pc-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 3px solid var(--accent);
+}
+
+/* ==========================================================================
+   The poker table (v3): a padded rail, a lit felt with grain, and glass plates
+   ========================================================================== */
+
+.felt-midnight { --felt-a: #2a5a8c; --felt-b: #1a3d64; --felt-c: #10243d; --rail-a: #3a434f; --rail-b: #141920; --rail-c: #232a33; --felt-line: rgb(170 205 255 / 0.22); }
+.felt-emerald  { --felt-a: #22946e; --felt-b: #14664e; --felt-c: #0b3d2f; --rail-a: #3d352c; --rail-b: #15110d; --rail-c: #241e17; --felt-line: rgb(190 255 225 / 0.22); }
+.felt-royal    { --felt-a: #5252b8; --felt-b: #363688; --felt-c: #1f1f55; --rail-a: #3a3447; --rail-b: #15121c; --rail-c: #241f2d; --felt-line: rgb(205 200 255 / 0.22); }
+.felt-burgundy { --felt-a: #962a46; --felt-b: #671b32; --felt-c: #3d101d; --rail-a: #433427; --rail-b: #19120c; --rail-c: #2b2015; --felt-line: rgb(255 215 190 / 0.22); }
+.felt-graphite { --felt-a: #525c68; --felt-b: #363e47; --felt-c: #20262c; --rail-a: #2c3138; --rail-b: #101316; --rail-c: #1b1f24; --felt-line: rgb(230 235 245 / 0.2); }
+
+/* The floor the table sits on: a dark room with one light over the table. */
+.pc3-floor {
+  background:
+    radial-gradient(70% 55% at 50% 38%, rgb(255 255 255 / 0.05), transparent 70%),
+    radial-gradient(100% 80% at 50% 50%, #121a23, #080b0f 100%);
+}
+/* The rail: padded leather, a seam of stitching, a deep shadow on the floor. */
+.pc3-rail {
+  background:
+    radial-gradient(120% 100% at 50% -20%, rgb(255 255 255 / 0.2), transparent 52%),
+    linear-gradient(180deg, var(--rail-a) 0%, var(--rail-c) 55%, var(--rail-b) 100%);
+  box-shadow:
+    0 34px 70px -18px rgb(0 0 0 / 0.85),
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 2px 0 rgb(255 255 255 / 0.1) inset,
+    0 -5px 12px rgb(0 0 0 / 0.6) inset;
+}
+.pc3-rail::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: inherit;
+  border: 1px dashed rgb(255 255 255 / 0.18);
+  pointer-events: none;
+}
+/* The felt: cloth grain under a spotlight, a betting line, a dark lip where it meets the rail. */
+.pc3-felt {
+  background:
+    radial-gradient(60% 52% at 50% 36%, rgb(255 255 255 / 0.11), transparent 72%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(74% 66% at 50% 44%, var(--felt-a) 0%, var(--felt-b) 62%, var(--felt-c) 100%);
+  box-shadow:
+    0 0 0 2px rgb(0 0 0 / 0.7),
+    0 0 0 3px rgb(255 255 255 / 0.07),
+    0 10px 30px rgb(0 0 0 / 0.45) inset,
+    0 0 90px rgb(0 0 0 / 0.28) inset;
+}
+.pc3-felt-line {
+  border: 1.5px solid var(--felt-line);
+  box-shadow: 0 0 0 4px rgb(0 0 0 / 0.06);
+}
+
+/* Playing cards */
+.pc-card {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  border-radius: 8%/5.8%;
+  background: linear-gradient(168deg, #ffffff 0%, #f3f5f8 70%, #e6eaef 100%);
+  color: #14181e;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.95) inset, 0 4px 10px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.4);
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.pc-card-rank {
+  position: absolute;
+  inset-block-start: 6cqw;
+  left: 8cqw;
+  font-size: 44cqw;
+  letter-spacing: -0.05em;
+}
+.pc-card-suit-small {
+  position: absolute;
+  top: 52cqw;
+  left: 9cqw;
+  width: 26cqw;
+  height: 26cqw;
+}
+.pc-card-suit-big {
+  position: absolute;
+  right: 7cqw;
+  bottom: 7cqw;
+  width: 56cqw;
+  height: 56cqw;
+  opacity: 0.95;
+}
+/* The back: a lattice in the club's colour, bordered, with the mark in the middle. */
+.pc-card-back {
+  background:
+    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.22) 0 11%, transparent 12%),
+    radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--accent) 70%, #0b0f14) 0 17%, transparent 18%),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.09) 0 1.5px, transparent 1.5px 6px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.09) 0 1.5px, transparent 1.5px 6px),
+    linear-gradient(160deg, color-mix(in oklab, var(--accent) 52%, #101822), color-mix(in oklab, var(--accent) 26%, #0b0f14));
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.5),
+    0 0 0 4cqw #eef1f5 inset,
+    0 0 0 5.5cqw color-mix(in oklab, var(--accent) 40%, #0b0f14) inset,
+    0 4px 10px rgb(0 0 0 / 0.5);
+}
+.suit-s { color: #14181e; }
+.suit-h { color: #d2283f; }
+.suit-d { color: #d2283f; }
+.suit-c { color: #14181e; }
+.deck-four .suit-d { color: #1f6fe0; }
+.deck-four .suit-c { color: #17853f; }
+
+@keyframes card-deal {
+  from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, -40px)) rotate(-12deg) scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes card-flip {
+  0% { transform: rotateY(90deg) translateY(-6px); opacity: 0.4; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes win-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 18px 2px rgb(209 174 104 / 0.35); }
+  50% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 32px 8px rgb(209 174 104 / 0.6); }
+}
+@keyframes turn-ring {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: var(--ring-length); }
+}
+@keyframes turn-breathe {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 55%, transparent), var(--shadow-plate); }
+  50% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 85%, transparent), 0 0 24px 2px color-mix(in oklab, var(--accent) 35%, transparent), var(--shadow-plate); }
+}
+.anim-card-deal { animation: card-deal 0.34s var(--ease-out-quint) both; }
+.anim-card-flip { animation: card-flip 0.32s var(--ease-out-quint) both; }
+.anim-chip-in { animation: chip-in 0.3s var(--ease-out-quint) both; }
+.anim-win { animation: win-glow 1.4s ease-in-out 2; }
+.anim-turn { animation: turn-breathe 1.6s ease-in-out infinite; }
+
+/* Chips: a disc with edge spots, an inlay ring, and a highlight on the rim */
+.pc-chip {
+  --chip: #d9dde3;
+  width: var(--chip-size, 18px);
+  height: var(--chip-size, 18px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 48%, var(--chip) 0 36%, color-mix(in oklab, var(--chip) 62%, black) 37% 41%, var(--chip) 42% 58%, transparent 59%),
+    repeating-conic-gradient(from 0deg, #f7f7f7 0 20deg, var(--chip) 20deg 60deg);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6), 0 1px 0 1px rgb(0 0 0 / 0.4), 0 2px 3px rgb(0 0 0 / 0.55), 0 1px 1px rgb(255 255 255 / 0.35) inset;
+  flex: none;
+}
+
+/* Name plates: dark glass with a hairline, lit from above */
+.pc3-plate {
+  background: linear-gradient(180deg, rgb(26 33 42 / 0.96), rgb(13 18 24 / 0.96));
+  box-shadow: var(--shadow-plate), 0 1px 0 rgb(255 255 255 / 0.07) inset;
+  backdrop-filter: blur(6px);
+}
+.pc3-plate-hero {
+  background: linear-gradient(180deg, rgb(30 38 48 / 0.98), rgb(14 19 26 / 0.98));
+}
+
+.turn-ring circle {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Cover / banner art built from gradients — original, no bitmaps */
+.banner-aurora  { background: radial-gradient(120% 140% at 0% 0%, #1b6f78 0%, transparent 55%), radial-gradient(90% 120% at 100% 20%, #3b3f9a 0%, transparent 60%), #101822; }
+.banner-ember   { background: radial-gradient(110% 130% at 100% 0%, #8a3b22 0%, transparent 55%), radial-gradient(90% 120% at 0% 100%, #5a2440 0%, transparent 60%), #17131a; }
+.banner-tide    { background: radial-gradient(120% 140% at 100% 100%, #116a6a 0%, transparent 55%), radial-gradient(80% 120% at 0% 0%, #1d4f8a 0%, transparent 60%), #0e1a22; }
+.banner-onyx    { background: radial-gradient(100% 140% at 50% 0%, #37424f 0%, transparent 60%), #10151b; }
+.banner-gilded  { background: radial-gradient(110% 140% at 0% 0%, #7a6230 0%, transparent 55%), radial-gradient(90% 120% at 100% 100%, #4a3320 0%, transparent 60%), #17140f; }
+
+@keyframes fly {
+  from { transform: translate(-50%, -50%); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.9); opacity: 0.2; }
+}
+.anim-fly { animation: fly 0.55s var(--ease-out-quint) both; }
+
+@keyframes turn-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@keyframes turn-own {
+  0%, 55% { background: var(--accent); }
+  80% { background: var(--color-warning); }
+  100% { background: var(--color-danger); }
+}
+.turn-bar { animation: turn-drain linear both; transform-origin: left center; }
+.turn-bar-own { animation-name: turn-drain, turn-own; animation-timing-function: linear; animation-fill-mode: both; }
+
+/* The v2 table classes, so previews written against them still render on the v3 build. */
+.pc-rail { background: linear-gradient(180deg, var(--rail-a), var(--rail-b)); box-shadow: 0 20px 40px -16px rgb(0 0 0 / 0.75), 0 2px 0 rgb(255 255 255 / 0.06) inset; }
+.pc-felt { background: radial-gradient(70% 62% at 50% 42%, var(--felt-a) 0%, var(--felt-b) 58%, var(--felt-c) 100%); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55), 0 8px 24px rgb(0 0 0 / 0.5) inset; }
+.pc-felt-line { border: 1px solid var(--felt-line); }
+
+/*
+ * Unlayered on purpose. A host page's own reset (for example the skeleton a published
+ * artifact is wrapped in) is unlayered, and unlayered rules beat everything in a layer.
+ */
+:root {
+  color-scheme: dark;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
