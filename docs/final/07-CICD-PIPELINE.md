@@ -93,8 +93,10 @@ Notes:
   matters (the test command already globs `tests/*.test.ts` — shard by file list).
 - e2e needs a build first (it loads the built file over `file://`); keep the `build` step
   immediately before it.
-- Add a **money-code guard** check (the existing build-time test that fails on money paths) to
-  the gate so the "no real-money gameplay" rule can never regress.
+- Add a **money-code guard** check (the build-time test that fails on money paths) to the gate so
+  the "no real-money gameplay" rule can never regress. In production this guard is **rescoped to
+  gameplay code** and the billing module lives in its own `src/platform/billing/` dir excluded
+  from it (`03` §8); the gate also enforces that gameplay code never imports billing.
 
 ### 3.2 Delivery (main / tags)
 

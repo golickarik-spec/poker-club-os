@@ -49,10 +49,10 @@ pricing, the data model, and which service owns it — is in `04-PROFIT-MODULE.m
 | # | Stream | Who pays | Model |
 |---|---|---|---|
 | 1 | **Subscriptions** (tiered) | Club owners | Recurring monthly, priced by number of clubs + tooling depth |
-| 2 | **Sponsored promotions** | Club owners | Pay to boost a tournament to more players (Diamond-funded first) |
+| 2 | **Sponsored promotions** | Club owners | Pay to boost a tournament to more players (Diamond-funded; deferred until Diamonds have a spend path) |
 | 3 | **White-label** | Organizations | ₪2,500 / $1,000 per month — their own branded platform, all features on |
 | 4 | **Feature upsells** | Club owners | À-la-carte unlocks of features not bundled in their tier |
-| 5 | **Diamonds** | Owners **and** players | A top-up virtual currency for convenience features (see guardrails) |
+| 5 | **Diamonds** | Owners **and** players | A top-up virtual currency; ships first as balance + ledger only, **no spend paths yet** (see guardrails) |
 | 6 | **Game dev & engine rental** | Other companies | B2B license of the reusable poker/tournament engine |
 | 7 | **"Top Clubs" discovery** | — (growth, not direct revenue) | Visibility surface that pulls in more owners |
 
@@ -70,8 +70,10 @@ pricing, the data model, and which service owns it — is in `04-PROFIT-MODULE.m
 ### The money guardrails (stated once here, enforced everywhere)
 
 - **No real-money gameplay.** Chips are virtual; nothing deposits, wagers, or pays out.
-- **Player Diamonds are cosmetic / convenience only** (e.g. extra decision time, themes). A
-  Diamond never affects chips, outcomes, or converts to cash.
+- **Player Diamonds have no spend responsibility yet** — balance + ledger only. Any future spend
+  feature will be **purely cosmetic** (themes, table designs, emotes), will **never** buy a
+  gameplay advantage (no extra decision time), and never affects chips, outcomes, or converts to
+  cash.
 - **Real money is gated** behind legal review (per market) and the app-store social-casino /
   age-gating review. Both are hard launch blockers.
 

@@ -32,30 +32,44 @@ Wrap `platform/*` in Fastify; in-memory `DB` seeded from `seed.ts`; write `clien
 gets 403; run the service-level demo journey (`crm.test.ts`) against the HTTP server.
 
 ### Phase 2 — Persist
-Repository layer + RDS Postgres; `withTx` around `store.mutate` (fixes the no-rollback gap);
-migrate fixtures (keep `t_`/`u_` ids); add unique constraints, RLS, partitions, indexes.
+Repository layer + RDS Postgres as the **single source of truth** (the API stays stateless — no
+shared in-process `DB` graph, `03` §4.2); `withTx` around `store.mutate` (fixes the no-rollback
+gap); migrate fixtures (keep `t_`/`u_` ids); add unique constraints, RLS, partitions, indexes.
+**Move the authoritative tournament loop server-side here** (clock advance → eliminations →
+`completeTournament`): once data is shared, the client must never write results — today the
+client-side `Runtime` does (`runtime.ts`) — it submits only actions.
 **Verify:** restart the API, data survives; attempt a cross-tenant read as one club's owner
-against another club's route → 403 + RLS denial (journey E logic).
+against another club's route → 403 + RLS denial (journey E logic); confirm a tampered client
+cannot POST a tournament result (only the server's loop writes `completeTournament`).
 
 ### Phase 3 — Move the tables
 Table service as a WS server; `TableDriver` → WS client; engine + `Runtime` server-side;
-delayed feed → Redis streams; server-driven timers.
+delayed feed → Redis streams; server-driven timers. **Table-ownership routing** (Redis
+`table_id`→task registry + WS router/forwarding — ALB stickiness is per-client, not per-table;
+`03` §6). **Disconnect/timeout handling** (server auto-checks/folds and sits out a dropped seat;
+reconnection re-attaches) — part of real multiplayer, built here, **not** deferred to Phase 6.
 **Verify:** drive a hand over WSS from two browsers; assert via a WS client that a spectator
 frame is ≥ 30 s delayed and contains **no** live hole cards (mirror the engine redaction tests
-over the wire); kill the table task mid-hand and confirm recovery from the event log.
+over the wire); kill the table task mid-hand and confirm recovery from the event log; drop a
+seated player mid-hand and confirm the server folds/sits them out and they can reconnect.
 
 ### Phase 4 — Auth & tenancy
 Magic-link / OTP + sessions; `actorId` from the session; `permissions` as middleware; RLS
-enforced; demo identities → real accounts; mobile refresh tokens.
+enforced; demo identities → real accounts; mobile refresh tokens. **Registration gates:** age
+gate (17+/18+), versioned ToS/privacy consent capture, one-account-per-verified-email/phone
+(DB unique constraint + rate limits). **In-app account self-deletion** (distinct from club-side
+`crm.forgetPlayer`; `03` §5).
 **Verify:** magic-link login issues a session; devtools cannot forge `actorId`; re-run journeys
-A–E against real accounts.
+A–E against real accounts; a second account on the same verified email is rejected; account
+self-deletion erases/anonymises platform identity and cascades per-club erasure.
 
 ### Phase 5 — Workers & channels
 Scheduler worker (Redis leader lock) + SQS channel workers; register SES/SNS/FCM adapters
-async; scheduled retention/erasure.
-**Verify:** trigger an announcement, assert an email arrives via SES sandbox and the delivery
-record's "delivered" count is real (not `simulated`); close all tabs and confirm a scheduled
-reminder still fires.
+async; **sender-domain auth (SPF/DKIM/DMARC)** so mail isn't spam-filed; scheduled
+retention/erasure.
+**Verify:** trigger an announcement, assert an email arrives via SES sandbox, passes domain auth
+in a seed inbox (not spam), and the delivery record's "delivered" count is real (not
+`simulated`); close all tabs and confirm a scheduled reminder still fires.
 
 ### Phase 6 — AWS deploy & hardening
 CDK infra; Dockerize the 4 services; CI/CD (`07-CICD-PIPELINE.md`); CloudFront SPA;
@@ -82,12 +96,19 @@ as it lands:
 
 | Profit step | Rides on | When |
 |---|---|---|
-| Owner subscriptions + `maxClubs`; generalised entitlements; Diamonds ledger (demo) | Phase 2 (persistence) | During/after Phase 2 |
+| Owner subscriptions + `maxClubs`; generalised entitlement *resolution*; Diamonds balance + ledger (demo, no spend) | Phase 2 (persistence) | During/after Phase 2 |
 | "Top Clubs" discovery (+ `country` field, `clubRankings`) | Phase 2 | Any time after persist |
-| Sponsored promotions (Diamond-funded, paced by the scheduler) | Phase 5 (scheduler worker) | After Phase 5 |
+| Sponsored promotions; buying feature add-ons | A Diamond-spend or cash path (`04` §4–§6) | **Deferred** until a spend mechanism is designed |
 | **Real billing** (provider checkout + webhooks) | Phase 6 (public HTTPS, Secrets Manager) | After Phase 6 **and legal** |
 | White-label tenancy + platform branding editor | Phase 6 (server) + billing | After real billing |
 | Engine SDK / B2B licensing | — (commercial track) | Parallel, any time |
+
+**Rough profit-module engineering estimate** (excludes legal/store calendar; on top of Phases 1–7):
+owner subscriptions + `maxClubs` + entitlement-resolution ≈ **2–3 wk**; Diamonds balance + ledger
+(demo) ≈ **1 wk**; "Top Clubs" discovery ≈ **1–2 wk**; real billing (provider checkout + webhooks,
+after legal) ≈ **2–3 wk**; white-label tenancy + platform branding editor ≈ **3–4 wk**. The
+Diamond-*spend* features (promotions, add-on purchases) are **unestimated until their spend
+mechanism is designed**. This closes the review's "profit module has no estimate" gap.
 
 ## 4. Dependencies & parallelism
 
@@ -106,8 +127,10 @@ as it lands:
    files, and leaning on the e2e journeys as the safety net.
 2. **Transaction/rollback gap** — `store.mutate` doesn't roll back on throw today; fix in
    Phase 2 or partial writes corrupt state under real concurrency.
-3. **Single-authoritative table tick** — needs sticky routing + per-table ownership +
-   event-log recovery; getting it wrong duplicates or loses hands under failover.
+3. **Single-authoritative table tick & routing** — needs a `table_id`→task ownership registry +
+   a WS router (ALB stickiness is per-client, insufficient) + event-log recovery; getting it
+   wrong duplicates or loses hands under failover. Plus disconnect/timeout auto-action, built in
+   Phase 3.
 4. **`competition.ts` uses `Date.now()` directly** in some default params — route through
    `clock.now()` for deterministic server time.
 5. **Analytics recompute-per-request** — fine at hundreds of members; add indexes/materialized

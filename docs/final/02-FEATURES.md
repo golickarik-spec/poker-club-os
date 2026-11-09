@@ -192,8 +192,10 @@ Covered by `spectator.test.ts` (3), `integrity.test.ts` (2).
 
 ## 13. Cross-cutting rules enforced in code
 
-- **No real-money features** — every balance is demo points; a build-time test fails on money
-  code paths (`platform.test`, `crm.test`).
+- **No real-money gameplay** — every chip balance is demo points; a build-time guard fails on
+  money code paths (`platform.test`, `crm.test`). In production this guard is **rescoped to
+  gameplay code** (engine / table / chip paths) so the legal-gated subscription billing module can
+  exist beside it without weakening it — see `03` §8 and `04` §4.
 - **Opponents' hidden cards never reach the client** — `viewOf` redaction; `viewOfAll` only on
   the server-side streamer path.
 - **Access codes never bypass account-level access** (journey E).
@@ -213,3 +215,17 @@ client, a database so data survives, real accounts, real notification delivery, 
 monetization in `04-PROFIT-MODULE.md`. The handful of MISSING items that need a server
 (link previews/OG, platform branding editor, cross-club live grid, tournament history import)
 are called out in `08-ROADMAP.md`.
+
+Production also adds the **store / legal compliance surface the prototype has no mechanism for
+today** (all MISSING, built in the auth work — `03` §5, `08` Phase 4):
+
+| Capability | Status | Note |
+|---|---|---|
+| In-app **account self-deletion** | MISSING | Apple requirement; distinct from club-side `crm.forgetPlayer`, which only removes a player from one club's CRM |
+| **Age gate** at registration (17+/18+) | MISSING | Stores require it for a poker app even with virtual chips (`05` §5) |
+| **ToS / privacy consent capture** at registration (versioned, timestamped) | MISSING | Technical half of the legal gate; documents are counsel's |
+| **One account per verified email/phone** | PARTIAL | Code-enforced uniqueness exists for memberships/tags; verified-identity uniqueness for *accounts* needs the real auth layer — protects leaderboard/league integrity |
+| **Sender-domain email auth** (SPF/DKIM/DMARC) | MISSING | So real delivery isn't spam-filed (`08` Phase 5) |
+
+Also note: **player disconnect/timeout handling** (server auto-fold/sit-out) is required for real
+multiplayer and is scheduled in `08` Phase 3 (not Phase 6).

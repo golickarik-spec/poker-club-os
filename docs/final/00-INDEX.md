@@ -26,6 +26,7 @@
 | 06 | [06-AWS-ARCHITECTURE.md](06-AWS-ARCHITECTURE.md) | Engineering | The AWS target architecture, every service and why |
 | 07 | [07-CICD-PIPELINE.md](07-CICD-PIPELINE.md) | Engineering | The build/test/deploy pipeline (greenfield — none exists today) |
 | 08 | [08-ROADMAP.md](08-ROADMAP.md) | All | The phased delivery sequence, dependencies, effort, and per-phase verification |
+| 09 | [09-REVIEW-RESPONSE.md](09-REVIEW-RESPONSE.md) | Engineering | Point-by-point response to the external plan review — each point's verdict, what changed, and where |
 
 The existing `mvp/docs/` files remain the **source of record**; this set references them and
 should not contradict them. Where two older docs disagreed, this set resolves it (see
@@ -39,8 +40,9 @@ These were decided for this consolidation and are applied uniformly across all d
 
 1. **Structure.** A folder of numbered docs with this index — not one monolithic file.
 2. **Audience.** Both business and engineering, clearly sectioned per document.
-3. **Monetization scope.** The **full ClubHouse model**, including **Diamonds purchasable by
-   players** — under the guardrails below.
+3. **Monetization scope.** The **full ClubHouse model**. **Player Diamond top-ups are a gated,
+   later addition** (legal + app-store review, and in-app purchase on mobile); Diamonds ship
+   first as a balance/ledger with **no spend paths** — under the guardrails below.
 4. **Billing placement.** The profit/billing module lives **inside the API service**, not as a
    separate service. Rationale: a provider-hosted checkout (Stripe / Paddle / Lemon Squeezy)
    keeps raw card data off our servers (PCI **SAQ-A**), so there is no material security risk
@@ -51,10 +53,16 @@ These were decided for this consolidation and are applied uniformly across all d
 ### Monetization guardrails (non-negotiable, consistent with the repo's hard constraints)
 
 - **No real-money gameplay, ever.** Chips are virtual and have no monetary value; nothing
-  deposits, withdraws, wagers, or pays out. The build-time test that fails on money code paths
-  stays in place.
-- **Player Diamonds are cosmetic / convenience only** — extra decision time, themes, and the
-  like. A Diamond **never** touches chip counts, hand outcomes, or converts to cash/winnings.
+  deposits, withdraws, wagers, or pays out. The build-time guard that fails on money code paths
+  **stays in place, rescoped to gameplay** (engine / table / chip code) so the subscription
+  billing module can exist without weakening it — see `03-ARCHITECTURE-AND-SERVICES.md` §8.
+- **Player Diamonds carry no spend responsibility yet** — for now they are only a balance and an
+  append-only ledger; there is nothing to spend them on. Whatever spend features are added later
+  will be **purely cosmetic** (themes, table designs, card backs, emotes) and will **never buy a
+  gameplay advantage** (no extra decision time, no in-hand edge), **never** touch chip counts or
+  hand outcomes, and **never** convert to cash/winnings. Anything that could affect a ranked or
+  league result is excluded by design — that is what keeps the product clear of the stores'
+  pay-to-win / social-casino classification. See `04-PROFIT-MODULE.md` §4.
 - **Real money is gated.** Live subscription charges and real-money Diamond top-ups ship **only
   after** (a) per-market legal review (gambling + consumer-payment + PII/consent) and (b) the
   app-store social-casino / age-gating review. Both are **hard launch blockers owned by

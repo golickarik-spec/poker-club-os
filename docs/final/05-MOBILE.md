@@ -88,6 +88,17 @@ This is a real submission gate that **overlaps the legal gate** (`00-INDEX.md`).
 RNG certification (still out of scope) — and the UI must continue to never claim certification.
 **Open this gate early**, in parallel with engineering.
 
+**Store-mandated product requirements** (built in the auth/account work, `03` §5 — listed here
+because the stores enforce them and the prototype has no mechanism for any of them today):
+
+- **In-app account deletion** — Apple requires an in-app path to delete your account, distinct
+  from the club-side `crm.forgetPlayer` (`03` §5).
+- **Age gate at sign-up** — self-attested 17+/18+ (`03` §5).
+- **In-app purchase for any Diamond top-up** — Apple StoreKit / Google Play Billing, **not**
+  Stripe, for digital goods bought in-app (`04` §4). No top-ups exist yet; this binds when they
+  are added, and it affects the economics (store commission) — a business decision outside this
+  doc.
+
 ## 6. Effort
 
 ≈ **+6–10 weeks of engineering** on top of the web build:

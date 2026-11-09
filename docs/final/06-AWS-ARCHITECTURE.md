@@ -22,8 +22,8 @@
   API service      Table service            Scheduler          Channel workers
   (Fastify,        (WS, per-table actor,    (leader-elected,   (drain outbox →
    stateless,       engine + Runtime,        cron-like loop)    SES/SNS/FCM)
-   autoscaled,      sticky by table)         single active      SQS-driven
-   + billing)
+   autoscaled,      owned 1 task/table       single active      SQS-driven
+   + billing)       via Redis registry)
         │               │                        │                  │
         └───────┬───────┴──────────┬─────────────┴──────────────────┘
                 ▼                   ▼
@@ -46,7 +46,7 @@ server management while supporting that model.
 | Service | Fargate shape | Scaling |
 |---|---|---|
 | **API service** | Stateless tasks behind the ALB | Autoscale on CPU / request count |
-| **Table service** | Stateful tasks, **sticky routing by `table_id`** | Scale by number of running tables; recover from the hand event log on task restart |
+| **Table service** | Stateful tasks; **each table owned by one task via a Redis `table_id`→task registry + a WS router** (ALB cookie stickiness is per-client, not per-table — insufficient; see `03` §6) | Scale by number of running tables; consistent-hash ownership; recover from the hand event log on task restart |
 | **Scheduler worker** | **1 active task**, Redis leader lock | Single active (standby acceptable) |
 | **Channel workers** | SQS consumers | Autoscale on SQS queue depth |
 
@@ -54,13 +54,17 @@ server management while supporting that model.
 
 ### 3.1 RDS PostgreSQL (Multi-AZ)
 
-- Business data; the `DB` shape maps almost one-to-one to tables (`03` §4).
+- Business data; the `DB` shape maps almost one-to-one to tables (`03` §4). **Postgres is the
+  single source of truth** (`03` §4.2); the API tier is stateless and Redis is cache/coordination
+  only — never a second authoritative copy.
 - **Row-level security** (`SET app.club_id`) + application `requirePermission` = defense in
   depth; tenant isolation is the primary pen-test target.
 - Append-only, month-partitioned `hands`, `audit_log`, `crm_events`.
 - Unique constraints replace code-enforced uniqueness; indexes / materialized views for
   analytics when scale demands.
-- Automated backups + point-in-time recovery; Multi-AZ failover.
+- Automated backups + point-in-time recovery; Multi-AZ failover. **Periodically rehearse an
+  actual restore** into a scratch instance and assert row counts / a smoke query — "backups exist"
+  is not "restore works."
 
 ### 3.2 ElastiCache Redis
 

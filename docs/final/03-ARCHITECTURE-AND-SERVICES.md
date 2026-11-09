@@ -50,7 +50,7 @@ inside the API service** (decision #4 in `00-INDEX.md`).
 |---|---|---|---|
 | **Client (SPA)** | All rendering (`mvp/src/app`, `mvp/src/player`, `mvp/src/console`, `mvp/src/platform-admin`, `mvp/src/ui`, `mvp/src/table`). **No** engine/service logic shipped. | Reworked `build.mjs` → static JS/CSS | S3 + CloudFront |
 | **API service** | Every exported fn in `api.ts`, `crm.ts`, `messaging.ts`, `analytics.ts`, `competition.ts`, `retention.ts`, `calendar.ts`, `scheduling.ts`, `migration.ts`, `integrity.ts`, `permissions.ts`, `core.ts` — **plus the profit/billing module** (plans, entitlements, invoices, payment webhooks, Diamonds ledger). Stateless, horizontally scalable. | Fastify wrapper; `actorId` from session, never from the body | Fargate behind ALB |
-| **Table service** | `mvp/src/engine/*` + `Runtime`/`TableDriver` + delayed `feeds`. One authoritative actor per table; clients send `submitCommand`, receive redacted event streams over WSS. | Extracted `runtime.ts` as a WS server | Fargate, sticky by `table_id`, Redis-backed |
+| **Table service** | `mvp/src/engine/*` + `Runtime`/`TableDriver` + delayed `feeds`. One authoritative actor per table; clients send `submitCommand`, receive redacted event streams over WSS. | Extracted `runtime.ts` as a WS server | Fargate; **one task owns each `table_id` via a Redis registry + WS router** (not ALB stickiness — §6), Redis-backed |
 | **Scheduler worker** | The housekeeping split out of `Runtime.tick`: `publishDueAnnouncements`, `automation.tick`, `runSchedules`, `runInactivityAlerts`, `runPersonalReminders`, `applyRetention`. Idempotent (dedupe keys exist today). | Headless loop, **Redis leader lock** (single active) | Fargate (1 task) |
 | **Channel workers** | Drain `db.outbox` via `channels.registerAdapter`; real SES/SNS/Twilio/FCM adapters, async. | SQS consumers | Fargate, SQS-scaled |
 
@@ -130,9 +130,22 @@ Key points:
 ### 4.2 Transaction boundary
 
 `store.mutate(fn)` (`store.ts`) is the seam — wrap each service call in
-`withTx(tx => fn(tx, actor, …))`. This also fixes today's no-rollback gap. Decision for v1:
-**keep the hot business DB in-process, write-through to Postgres per mutation** (closest to the
-current design, lowest refactor); revisit if contention appears.
+`withTx(tx => fn(tx, actor, …))`. This also fixes today's no-rollback gap (`store.mutate` runs
+`fn` then `touch()` with no try/catch, so a throw mid-mutation leaves a partial write).
+
+**Decision for v1: PostgreSQL is the single source of truth, and the API service is genuinely
+stateless.** Each request opens a transaction, reads and writes through a repository layer, and
+commits — there is **no shared long-lived in-process `DB` graph**. This is what makes "stateless,
+horizontally scalable, autoscaled" (the service table in §2 and `06` §2) actually hold: any API
+task can serve any request because none of them owns authoritative state. **Redis is a
+cache/coordination layer in front of Postgres** (hot reads, pub/sub invalidation, rate limits,
+locks) — never a second copy of the truth.
+
+> This supersedes any "keep the hot DB in-process" phrasing from earlier drafts: an in-process
+> mutable graph cannot coexist with more than one API task — two autoscaled tasks would diverge.
+> The prototype's whole-graph `useDb()` / `act()` access is exactly the pattern Phase 1 replaces
+> with per-call service RPCs (§2.1); the repository layer that makes reads/writes hit Postgres
+> lands in Phase 2.
 
 ### 4.3 Redis (ElastiCache)
 
@@ -159,6 +172,20 @@ Replaces the demo `signIn(db, userId)` stub where `me.id` is client-trusted.
   The three architecture tests keep guarding the boundary.
 - **Multi-tenancy = app checks + Postgres RLS.** Tenant isolation is the primary pen-test
   target.
+- **Registration gates (store & legal compliance — none exist in the prototype):**
+  - **Age gate** — a self-attested 17+/18+ check at sign-up (the stores require it for a poker
+    app, even virtual-chips-only; `05` §5). Store the attested age-band / date-of-birth and block
+    under-age accounts.
+  - **Consent capture** — record acceptance of a **versioned, timestamped** Terms of Service and
+    Privacy Policy at registration, plus a separate opt-in for marketing channels. This is the
+    technical half of the legal gate (`00-INDEX`); the documents themselves are counsel's.
+  - **One account per verified identity** — unique **verified** email (and phone where used)
+    enforced by a DB unique constraint, so leaderboards and leagues can't be inflated with
+    sock-puppet accounts. Pair with Redis rate-limiting on auth and write endpoints.
+- **Account self-deletion (Apple requirement — missing today):** users can delete their **own
+  account** from within the app. This is distinct from the club-side `crm.forgetPlayer`, which
+  only removes a player from one club's CRM; account deletion erases/anonymises the platform-level
+  identity and cascades the existing per-club erasure. Built in Phase 4 with real accounts.
 
 ## 6. Server-authoritative play (table service)
 
@@ -174,8 +201,27 @@ The engine moves to the server unchanged (pure TS). The contract already assumes
   virtual-chips v1; never claim certification).
 - **Delayed spectator feed** moves to Redis streams; nothing younger than the delay (≥ 30 s
   public / ≥ 60 s streamer) is ever published; `canWatchTournament` gates it server-side.
-- **Scaling:** one authoritative actor per table; route WS connections sticky by table; recover
-  in-flight tournaments from the hand event log on task restart (risk item #3).
+- **Scaling & table ownership (not ALB stickiness):** each table is owned by exactly **one**
+  table-service task at a time. ALB cookie stickiness is **per-client, not per-table**, so it
+  cannot guarantee every seat of a table reaches that task — a dedicated routing layer is
+  required. Keep a **`table_id` → owning-task registry in Redis**; a thin WS router (or the
+  receiving task) looks up the owner and either redirects the client to it or forwards its
+  commands over Redis pub/sub. Assign/relocate ownership by consistent hashing on `table_id`;
+  recover in-flight tournaments from the hand event log on task restart (risk item #3). **This
+  routing design is a named Phase 3 work item, not a config flag.**
+- **Disconnect & timeout handling (part of real multiplayer — Phase 3, not deferred):** when a
+  seated player's connection drops or their server-driven turn timer expires, the **server** takes
+  the default action (check or fold) and sits them out; reconnection re-attaches them to the live
+  table view. Without this there is no real multiplayer, so it ships with the table service in
+  Phase 3 — not with the later reconnection-hardening in Phase 6.
+
+**Tournament-progression authority.** Today the client-side `Runtime` advances the clock and
+calls `api.completeTournament(...)` (`runtime.ts`) — the browser decides standings. Once the
+database is shared/persisted, a client must never write results. The authoritative tournament
+loop (clock advance → eliminations → `completeTournament`) therefore moves **server-side no later
+than Phase 2 (persistence)** — initially inside the API/scheduler process, then into this table
+service's per-tournament actor in Phase 3. Clients submit only *actions*, never results or
+standings. This is distinct from the real-time per-seat WSS streaming, which can land in Phase 3.
 
 ## 7. Jobs, notifications & scheduling
 
@@ -189,11 +235,29 @@ The engine moves to the server unchanged (pure TS). The contract already assumes
   adapter is registered, rows stay `simulated` exactly as today. Delivery records already
   separate "eligible" from "delivered" with per-channel consent, so unsubscribe handling hangs
   off that.
+- **Email deliverability:** before real email can count as delivered, configure sender-domain
+  authentication — **SPF, DKIM, and DMARC** on the SES sending domain — or announcements land in
+  spam. Treat "passes domain auth in a seed inbox" as part of the Phase 5 verification, not an
+  afterthought.
 
 ## 8. What stays out (preserved at every phase)
 
-- **No real money in gameplay** — no wallet, deposits, withdrawals, wagering, payouts. Virtual
-  chips only. The build-time money test stays. (The monetization in `04-PROFIT-MODULE.md` is
-  B2B subscription/SaaS billing + cosmetic Diamonds — a *different* money path, gated by legal.)
+- **No real money in gameplay** — no deposits, withdrawals, wagering, or payouts; virtual chips
+  only. The build-time money guard **stays, but is rescoped to gameplay code** (engine / table /
+  chip paths) so it keeps failing on `deposit|withdraw|cash-out|payout|wager` there forever, while
+  the **subscription billing module** — a *different*, legal-gated money path in
+  `04-PROFIT-MODULE.md` — lives in its own `mvp/src/platform/billing/` directory that the gameplay
+  guard excludes. Two added rules keep them separated: **(a)** engine/table/gameplay code may never
+  `import` the billing module, and **(b)** the Diamonds feature is named **"diamond balance /
+  ledger", never "wallet"**, so nothing in the gameplay scan trips. Billing's own guard forbids
+  storing card numbers — checkout is provider-hosted (PCI SAQ-A). *(Why this matters: today the
+  guard at `crm.test.ts:1644` scans all of `src/` for `wallet|stripe|payout|…`; the profit module
+  as first written would have failed it. Rescoping is the fix.)*
+- **No bots and no demo/seed data in production** — the fairness rules already exclude bots and
+  demo-seeded results from leaderboards (`competition.ts`); production additionally must **not seed
+  the demo fixtures** (the `seed.ts` identities/clubs are dev/test only). The deploy pipeline seeds
+  an empty/real dataset, and a smoke check asserts no bot or `seeded` rows exist in prod. Whether
+  any practice bots exist in the live product at all is a product decision; until decided, assume
+  none.
 - **No certified RNG / collusion detection** for v1; shuffle-seed audit hash only.
 - **Multi-region** and real-money settlement seams — deferred.

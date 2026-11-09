@@ -29,10 +29,10 @@ path to it.
 | # | Stream | Owner service | New data | Build phase (see 08) |
 |---|---|---|---|---|
 | 1 | Subscriptions | API (billing module) | `owner_subscriptions`, `plans`, `invoices` | Profit phase, then real billing after legal |
-| 2 | Sponsored promotions | API + Scheduler + Client | `promotions` | After Diamonds |
+| 2 | Sponsored promotions | API + Scheduler + Client | `promotions` | **Deferred** — needs a Diamond-spend mechanism (or a cash path) first |
 | 3 | White-label | API (as a plan) + platform tenancy | plan flags, `organizations` | After AWS + billing |
-| 4 | Feature upsells | API (entitlements) | `entitlements`, `catalog` | Profit phase |
-| 5 | Diamonds | API (billing module) | `wallets`, `diamond_ledger` | Profit phase (demo), top-ups after legal |
+| 4 | Feature upsells | API (entitlements) | `entitlements`, `catalog` | Entitlement resolution in profit phase; *buying* add-ons deferred (needs a spend path) |
+| 5 | Diamonds | API (billing module) | `diamond_balances`, `diamond_ledger` | Profit phase: **balance + ledger only, no spend paths**; spend features and real-money top-ups later |
 | 6 | Engine / B2B rental | commercial (engine as SDK) | license keys | Parallel commercial track |
 | 7 | "Top Clubs" discovery | API + Client | `country` on `Club`, club ranking | Growth surface, any time after persist |
 
@@ -74,6 +74,13 @@ count *within* one club. Two changes:
    `maxClubs` in the club-creation path (`migration.ts` club creation / `api.ts` create-club)
    with `fail('plan_clubs_full', …)`, mirroring the existing `fail('club_full', …)`. **This
    replaces the prototype's hard-coded 3-clubs-per-owner cap.**
+   - **Existing per-club limits must not become undefined.** Today `PlanLimits` (members,
+     monthlyActive, concurrentTables, tournamentsPerMonth, adminSeats) live on each `Club` via
+     `planId` + `limitOverrides`. When the *subscription* moves up to the owner, decide and
+     document how the owner tier maps onto per-club limits: either **(a)** the owner tier sets a
+     default `PlanLimits` applied to each of the owner's clubs, or **(b)** per-club limits stay
+     independent and only `maxClubs` + `crmEnabled` move to the owner level. Pick one so an owner
+     changing plans has defined behaviour for member/table caps — not just club count.
 2. **Rename tiers** to Starter / Growth / Pro and set real `baseFee` once a provider exists.
    Gate the CRM console routes behind `crmEnabled` via `permissions.ts`-style checks so non-Pro
    owners get the "no access" page.
@@ -92,41 +99,47 @@ market needs ILS):
 
 ---
 
-## 4. Diamonds (virtual currency — owners **and** players)
+## 4. Diamonds (virtual currency — balance + ledger only, for now)
 
 ### Concept
 
-A top-up consumable that sits **alongside** subscriptions:
-
-- **Club owners** spend Diamonds to fund sponsored promotions (§5) and feature upsells (§6) in
-  their first versions.
-- **Players** spend Diamonds on **cosmetic / convenience** perks only — extra decision time at
-  the table, themes, and similar.
-
 Diamonds are a **platform** currency (real money in → Diamonds), **distinct from demo chips**.
+For now they carry **no spend responsibility at all**: the product ships only a **balance** and an
+**append-only ledger**. There is deliberately nothing to spend them on yet — spend features come
+later, once designed. This keeps the initial scope minimal and avoids baking in any gameplay
+coupling.
 
 ### Guardrails (hard)
 
-- **No Diamond ever converts to chips, winnings, or cash-out.** Player perks never touch chip
-  counts or hand outcomes. This keeps the product clear of gambling-value features and the
-  build-time money test intact.
-- Real-money **top-ups ship only behind the legal + app-store gates** (`00-INDEX.md`). Until
-  then, Diamonds exist as an earned/demo balance so the spend paths can be built and tested.
+- **Diamonds do nothing yet.** No perks, no gameplay effect, no conversions. (This is a change
+  from an earlier draft that proposed "extra decision time" as a player perk — removed, because
+  buying think-time in a ranked/league game is a competitive advantage, i.e. pay-to-win, exactly
+  the signal the stores use to classify an app as gambling.)
+- **Whatever spend features are added later will be purely cosmetic** — themes, table designs,
+  card backs, emotes. A Diamond will **never** buy a gameplay advantage (explicitly **no "extra
+  decision time"** and no in-hand edge), **never** touch chip counts or hand outcomes, and
+  **never** convert to chips, winnings, or cash. Anything that could move a ranked or league
+  result is excluded by design — this is what keeps the app clear of pay-to-win / social-casino
+  classification.
+- **Naming:** the feature is the **"diamond balance / ledger", never a "wallet"** — both to stay
+  clear of the gameplay money guard (`03` §8) and to avoid a gambling-flavoured term in store
+  review.
+- **Real-money top-ups ship only behind the legal + app-store gates** (`00-INDEX.md`). Until then,
+  Diamonds exist as a demo/earned balance so the data model can be built and tested.
+- **When top-ups are added, in-app purchases on mobile must use Apple StoreKit / Google Play
+  Billing** — Apple and Google require their own in-app purchase for digital goods consumed in the
+  app, so these **cannot** go through Stripe. Stripe / Paddle / Lemon Squeezy remain for the B2B
+  subscription (§3); a web top-up may use the subscription provider.
 
 ### How to implement (API service)
 
-- **Data**: `wallets { ownerId|userId, diamonds }` and an append-only `diamond_ledger`
-  (purchases, spends) following the audit/event-log pattern.
-- **Service**: a new `mvp/src/platform/wallet.ts` (same guarded-function shape). Every spend goes
-  through it (`fail('insufficient_diamonds', …)`), permission-checked and logged. Never enforce
-  a spend in the UI.
-- **Player perk hook (extra decision time)**: the turn timer lives in the **table service**
-  (`TableDriver` / engine timeout handling). The *grant* must be validated server-side — a
-  client must not award itself time. The wallet debit (API) and the timer extension (table
-  service) are two steps; the table service checks an entitlement/grant token issued by the
-  API.
-- **Order**: ship the ledger + balance first (demo), then the spend paths, then the real-money
-  purchase last through the subscription provider.
+- **Data**: `diamond_balances { ownerId|userId, diamonds }` and an append-only `diamond_ledger`
+  (credits/debits) following the audit/event-log pattern. Lives in `mvp/src/platform/billing/`.
+- **Service**: a small guarded module (same `fn(db, actor, …)` shape) exposing read-balance and a
+  credit entry point. **No debit/spend API until a spend feature is designed** — there is nothing
+  to debit against yet.
+- **Order**: ship the balance + ledger (demo) now; add spend paths and real-money top-ups later,
+  each behind its own gate (legal, app-store, IAP).
 
 ---
 
@@ -134,6 +147,10 @@ Diamonds are a **platform** currency (real money in → Diamonds), **distinct fr
 
 Club owners pay to **boost a tournament** to players across discovery, the player home feed,
 and the "Top Clubs" surfaces — a direct acquisition tool for owners.
+
+> **Status: deferred.** This stream is paid in Diamonds, which currently have **no spend path**
+> (§4). Build it only after a Diamond-spend mechanism (or a direct cash path) exists; the design
+> below is the target, not near-term work.
 
 - **Service**: a new `mvp/src/platform/promotions.ts` beside `automation.ts` (same guarded shape);
   add a `promotions.manage` permission (owner & manager).
@@ -144,8 +161,9 @@ and the "Top Clubs" surfaces — a direct acquisition tool for owners.
 - **Pacing & accounting**: the **Scheduler worker** (the former `Runtime.tick`) burns budget
   and paces impressions, exactly like the announcement/automation jobs it already runs. Record
   impressions/clicks with the delivery-record pattern (eligible vs actual).
-- **Payment**: charge against **Diamonds** first (no second payment integration); add a
-  cash/CPM path later.
+- **Payment**: **deferred** — promotions need a Diamond-spend mechanism (§4) or a direct cash
+  path, neither of which exists yet. When spend lands, charge against **Diamonds** first (no
+  second payment integration); add a cash/CPM path later.
 - **Respect responsible play**: a self-set break (`channels.ts`) suppresses promotions to that
   player.
 
@@ -176,8 +194,10 @@ How to implement (API service):
    `requireEntitlement(db, club, 'branding.upload')`.
 2. **Catalogue** of buyable features in `seed.ts` / a `catalog` table (id, title, price or
    Diamond cost, one-off vs recurring).
-3. **Purchase**: spend Diamonds (cheapest first version) to toggle an entitlement; a cash path
-   follows the subscription provider. Record and `audit` every purchase.
+3. **Purchase**: **deferred until a spend mechanism exists.** The *entitlement resolution*
+   (steps 1–2) can be built now and driven by plan defaults + manually-granted add-ons; the
+   *buying* of an add-on waits for either a Diamond-spend path (§4) or a cash path via the
+   subscription provider. Record and `audit` every grant/purchase.
 4. **UI**: an "Add-ons" panel in `Subscription.tsx` reusing the plan-comparison cards; locked
    features show an inline "unlock" affordance, **not** a hard wall (strategic priority).
 
@@ -253,12 +273,15 @@ The profit module slots into the roadmap (`08-ROADMAP.md`) in this internal orde
 stream reuses the previous one's infrastructure:
 
 1. **Owner subscriptions + `maxClubs`** — the core; everything hangs off it.
-2. **Diamonds ledger & balance** (demo) — the currency that powers §5 and §6 cheaply.
-3. **Generalised entitlements** — turn the one gate into a reusable system.
+2. **Diamonds balance & ledger** (demo) — the data model only; **no spend paths yet** (spend
+   features are deferred, §4).
+3. **Generalised entitlements** — turn the one gate into a reusable system (resolution now;
+   *buying* add-ons later, when a spend path exists).
 4. **Top Clubs** — low-risk additive growth surface.
-5. **Sponsored promotions** — monetises §4/§9, paid in Diamonds.
-6. **Real billing engine** (provider + webhooks) — flips subscriptions/upsells/Diamonds from
-   demo to revenue. **Gated by legal + app-store review.**
+5. **Sponsored promotions** — **deferred** until a Diamond-spend or cash path exists (§5).
+6. **Real billing engine** (provider + webhooks) — flips subscriptions (and later Diamond
+   top-ups) from demo to revenue. **Gated by legal + app-store review.** Mobile top-ups use IAP
+   (§4).
 7. **White-label tenancy + platform branding editor** — needs the server and billing.
 8. **Engine SDK / B2B licensing** — parallel commercial track.
 
